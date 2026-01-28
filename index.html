@@ -73,6 +73,21 @@
                 </div>
             </div>
 
+            <!-- Usage du bien -->
+            <div class="form-group" id="bien-usage-group" style="display: none;">
+                <label for="bien_usage">Objectif du bien <span class="required">*</span></label>
+                <select id="bien_usage" name="bien_usage">
+                    <option value="">Sélectionner un objectif</option>
+                    <option value="residence_principale">Résidence principale</option>
+                    <option value="residence_secondaire">Résidence secondaire</option>
+                    <option value="investissement_locatif">Investissement locatif</option>
+                    <option value="investissement_locatif_lmnp">Investissement locatif (LMNP)</option>
+                    <option value="investissement_colocation">Investissement colocation</option>
+                    <option value="patrimoine">Patrimoine / long terme</option>
+                    <option value="autre">Autre</option>
+                </select>
+            </div>
+
             <!-- Type de bien -->
             <div class="form-group">
                 <label>Type de bien <span class="required">*</span></label>
@@ -152,8 +167,11 @@
 
             <!-- Surface du terrain -->
             <div class="form-group">
-                <label for="surface_terrain">Surface du terrain minimum (m²)</label>
-                <input type="text" id="surface_terrain" name="surface_terrain" placeholder="Surface minimum" inputmode="numeric" pattern="[0-9 ]*" data-format="number">
+                <label>Surface du terrain (m²)</label>
+                <div class="price-row">
+                    <input type="text" id="surface_terrain" name="surface_terrain" placeholder="Surface minimum" inputmode="numeric" pattern="[0-9 ]*" data-format="number">
+                    <input type="text" id="surface_terrain_max" name="surface_terrain_max" placeholder="Surface maximum" inputmode="numeric" pattern="[0-9 ]*" data-format="number">
+                </div>
             </div>
 
             <!-- Pièces -->

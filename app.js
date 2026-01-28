@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initSlider();
     initCityAutocomplete();
     initNumberFormatting();
+    initBienUsageSelect();
     initFormSubmit();
 });
 
@@ -294,6 +295,7 @@ function initFormSubmit() {
         // Récupérer toutes les données du formulaire
         const formData = new FormData(this);
         normalizeFormattedNumbers(this, formData);
+        applyDefaultMinValues(this, formData);
         const data = collectFormData(formData);
         
         // Ajouter les données complètes de la ville
@@ -340,6 +342,37 @@ function initNumberFormatting() {
 }
 
 /**
+ * Affiche la liste "Objectif du bien" dès qu'un type de bien est sélectionné.
+ */
+function initBienUsageSelect() {
+    const bienInputs = document.querySelectorAll('input[name="bien"]');
+    const usageGroup = document.getElementById('bien-usage-group');
+    const usageSelect = document.getElementById('bien_usage');
+
+    if (!usageGroup || !usageSelect || bienInputs.length === 0) {
+        return;
+    }
+
+    const updateVisibility = () => {
+        const hasSelection = Array.from(bienInputs).some(input => input.checked);
+        if (hasSelection) {
+            usageGroup.style.display = '';
+            usageSelect.required = true;
+        } else {
+            usageGroup.style.display = 'none';
+            usageSelect.required = false;
+            usageSelect.value = '';
+        }
+    };
+
+    bienInputs.forEach(input => {
+        input.addEventListener('change', updateVisibility);
+    });
+
+    updateVisibility();
+}
+
+/**
  * Remplace les valeurs formatées par des valeurs brutes dans le FormData.
  */
 function normalizeFormattedNumbers(form, formData) {
@@ -351,6 +384,37 @@ function normalizeFormattedNumbers(form, formData) {
         }
         const raw = input.dataset.raw || String(input.value).replace(/\s+/g, '');
         formData.set(name, raw);
+    });
+}
+
+/**
+ * Applique une valeur par défaut de 0 pour les champs minimums vides.
+ */
+function applyDefaultMinValues(form, formData) {
+    const ranges = [
+        { min: 'prix_min', max: 'prix_max' },
+        { min: 'surface_min', max: 'surface_max' },
+        { min: 'surface_terrain', max: 'surface_terrain_max' }
+    ];
+
+    ranges.forEach(({ min, max }) => {
+        if (!formData.has(min)) {
+            return;
+        }
+
+        const minValue = formData.get(min);
+        const maxValue = formData.get(max);
+        const minTrimmed = minValue === null ? '' : String(minValue).trim();
+        const maxTrimmed = maxValue === null ? '' : String(maxValue).trim();
+
+        if (!minTrimmed && maxTrimmed) {
+            formData.set(min, '0');
+            const input = form.querySelector(`[name="${min}"]`);
+            if (input) {
+                input.value = '0';
+                input.dataset.raw = '0';
+            }
+        }
     });
 }
 
