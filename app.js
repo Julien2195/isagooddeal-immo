@@ -11,6 +11,7 @@ const WEBHOOK_QUERY_PARAM = 'webhook';
 document.addEventListener('DOMContentLoaded', function() {
     initSlider();
     initCityAutocomplete();
+    initNumberFormatting();
     initFormSubmit();
 });
 
@@ -292,6 +293,7 @@ function initFormSubmit() {
         
         // Récupérer toutes les données du formulaire
         const formData = new FormData(this);
+        normalizeFormattedNumbers(this, formData);
         const data = collectFormData(formData);
         
         // Ajouter les données complètes de la ville
@@ -313,6 +315,42 @@ function initFormSubmit() {
         if (openUrl) {
             window.open(leboncoinUrl, '_blank');
         }
+    });
+}
+
+/**
+ * Formatage des champs numériques avec espaces (ex: 80 000)
+ */
+function initNumberFormatting() {
+    const inputs = document.querySelectorAll('input[data-format="number"]');
+    inputs.forEach((input) => {
+        const updateValue = () => {
+            const digits = String(input.value).replace(/\D/g, '');
+            input.dataset.raw = digits;
+            if (!digits) {
+                input.value = '';
+                return;
+            }
+            input.value = digits.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+        };
+
+        input.addEventListener('input', updateValue);
+        input.addEventListener('blur', updateValue);
+    });
+}
+
+/**
+ * Remplace les valeurs formatées par des valeurs brutes dans le FormData.
+ */
+function normalizeFormattedNumbers(form, formData) {
+    const inputs = form.querySelectorAll('input[data-format="number"]');
+    inputs.forEach((input) => {
+        const name = input.name;
+        if (!name) {
+            return;
+        }
+        const raw = input.dataset.raw || String(input.value).replace(/\s+/g, '');
+        formData.set(name, raw);
     });
 }
 
