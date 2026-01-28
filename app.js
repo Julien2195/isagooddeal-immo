@@ -94,7 +94,7 @@ async function searchCities(query) {
     autocompleteList.classList.add('show');
     
     try {
-        const url = `https://geo.api.gouv.fr/communes?nom=${encodeURIComponent(query)}&fields=nom,code,codesPostaux,codeDepartement,codeRegion,population&boost=population&limit=10`;
+        const url = `https://geo.api.gouv.fr/communes?nom=${encodeURIComponent(query)}&fields=nom,code,codesPostaux,codeDepartement,codeRegion,population,centre&boost=population&limit=10`;
         
         const response = await fetch(url, {
             method: 'GET',

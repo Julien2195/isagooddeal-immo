@@ -7,6 +7,114 @@
  * @param {Object} data - Données du formulaire
  * @returns {string} URL complète pour LeBonCoin
  */
+function normalizeNumberInput(value) {
+    if (value === undefined || value === null) {
+        return undefined;
+    }
+    const trimmed = String(value).trim();
+    if (!trimmed) {
+        return undefined;
+    }
+    const normalized = trimmed.replace(/\s+/g, '');
+    return normalized.length > 0 ? normalized : undefined;
+}
+
+function formatRange(minValue, maxValue) {
+    const min = normalizeNumberInput(minValue);
+    const max = normalizeNumberInput(maxValue);
+
+    if (!min && !max) {
+        return undefined;
+    }
+    if (min && max) {
+        return `${min}-${max}`;
+    }
+    if (min) {
+        return `${min}-`;
+    }
+    return `-${max}`;
+}
+
+function parseRangeSelection(values) {
+    const numericValues = [];
+    let openEnded = false;
+
+    const pushValue = (entry) => {
+        if (entry === undefined || entry === null) {
+            return;
+        }
+        const raw = String(entry).trim();
+        if (!raw) {
+            return;
+        }
+
+        if (raw.endsWith('+')) {
+            openEnded = true;
+            const base = raw.slice(0, -1).trim();
+            if (base) {
+                const num = Number(base);
+                if (Number.isFinite(num)) {
+                    numericValues.push(num);
+                }
+            }
+            return;
+        }
+
+        if (raw.includes(',')) {
+            raw.split(',').forEach(pushValue);
+            return;
+        }
+
+        if (raw.includes('-')) {
+            const [minRaw, maxRaw] = raw.split('-').map((part) => part.trim());
+            if (minRaw) {
+                const min = Number(minRaw);
+                if (Number.isFinite(min)) {
+                    numericValues.push(min);
+                }
+            }
+            if (maxRaw) {
+                const max = Number(maxRaw);
+                if (Number.isFinite(max)) {
+                    numericValues.push(max);
+                }
+            }
+            return;
+        }
+
+        const numeric = Number(raw);
+        if (Number.isFinite(numeric)) {
+            numericValues.push(numeric);
+        }
+    };
+
+    if (Array.isArray(values)) {
+        values.forEach(pushValue);
+    } else {
+        pushValue(values);
+    }
+
+    if (numericValues.length === 0) {
+        return undefined;
+    }
+
+    return {
+        min: Math.min(...numericValues),
+        max: openEnded ? undefined : Math.max(...numericValues)
+    };
+}
+
+function formatRangeFromSelection(values) {
+    const range = parseRangeSelection(values);
+    if (!range) {
+        return undefined;
+    }
+    if (range.max !== undefined && range.min === range.max) {
+        return String(range.min);
+    }
+    return formatRange(range.min, range.max);
+}
+
 function mapToLeboncoinURL(data) {
     const baseUrl = 'https://www.leboncoin.fr/recherche';
     const params = new URLSearchParams();
@@ -29,8 +137,15 @@ function mapToLeboncoinURL(data) {
         'terrain': '3',
         'parking': '4'
     };
-    if (data.type_bien && realEstateTypeMap[data.type_bien]) {
-        params.append('real_estate_type', realEstateTypeMap[data.type_bien]);
+    if (data.type_bien) {
+        const typeBien = Array.isArray(data.type_bien) ? data.type_bien : [data.type_bien];
+        const realEstateTypes = typeBien
+            .map(type => realEstateTypeMap[type])
+            .filter(type => type);
+        
+        if (realEstateTypes.length > 0) {
+            params.append('real_estate_type', realEstateTypes.join(','));
+        }
     }
     
     // Type d'annonce (offre/demande)
@@ -43,30 +158,33 @@ function mapToLeboncoinURL(data) {
     // Localisation avec rayon
     if (data.ville_data) {
         const city = data.ville_data;
-        const rayon = data.rayon ? parseInt(data.rayon) * 1000 : 3000; // Convertir km en mètres
-        
-        // Format: NomVille_CodePostal__latitude_longitude_codeInsee_rayon
-        const locationStr = `${city.nom}_${city.codesPostaux[0]}__${rayon}_${rayon}`;
+        const postalCode = city.codesPostaux && city.codesPostaux.length > 0 ? city.codesPostaux[0] : '';
+        const radiusKm = data.rayon ? parseInt(data.rayon, 10) : 0;
+        const radiusMeters = Number.isFinite(radiusKm) && radiusKm > 0 ? radiusKm * 1000 : undefined;
+        const centre = city.centre && Array.isArray(city.centre.coordinates) ? city.centre.coordinates : null;
+        const lon = centre && centre.length >= 2 ? centre[0] : undefined;
+        const lat = centre && centre.length >= 2 ? centre[1] : undefined;
+
+        let locationStr = postalCode ? `${city.nom}_${postalCode}` : `${city.nom}`;
+        if (
+            radiusMeters !== undefined &&
+            Number.isFinite(lat) &&
+            Number.isFinite(lon)
+        ) {
+            locationStr = `${locationStr}__${lat}_${lon}_${radiusMeters}`;
+        }
         params.append('locations', locationStr);
     }
     
     // Prix
-    if (data.prix_min || data.prix_max) {
-        let priceRange = '';
-        if (data.prix_min) priceRange += data.prix_min;
-        priceRange += '-';
-        if (data.prix_max) priceRange += data.prix_max;
-        else priceRange += 'max';
+    const priceRange = formatRange(data.prix_min, data.prix_max);
+    if (priceRange) {
         params.append('price', priceRange);
     }
     
     // Surface habitable
-    if (data.surface_min || data.surface_max) {
-        let squareRange = '';
-        if (data.surface_min) squareRange += data.surface_min;
-        squareRange += '-';
-        if (data.surface_max) squareRange += data.surface_max;
-        else squareRange += 'max';
+    const squareRange = formatRange(data.surface_min, data.surface_max);
+    if (squareRange) {
         params.append('square', squareRange);
     }
     
@@ -76,27 +194,33 @@ function mapToLeboncoinURL(data) {
         'neuf': 'new',
         'viager': 'viager'
     };
-    if (data.type_vente && saleTypeMap[data.type_vente]) {
-        params.append('sale_type', saleTypeMap[data.type_vente]);
+    if (data.type_vente) {
+        const typeVente = Array.isArray(data.type_vente) ? data.type_vente : [data.type_vente];
+        const saleTypes = typeVente
+            .map(type => saleTypeMap[type] || type)
+            .filter(type => type);
+        
+        if (saleTypes.length > 0) {
+            params.append('immo_sell_type', saleTypes.join(','));
+        }
     }
     
     // Surface du terrain
-    if (data.surface_terrain) {
-        params.append('land_plot_surface', `${data.surface_terrain}-max`);
+    const landPlotRange = formatRange(data.surface_terrain, data.surface_terrain_max);
+    if (landPlotRange) {
+        params.append('land_plot_surface', landPlotRange);
     }
     
     // Nombre de pièces
-    if (data.pieces) {
-        const pieces = Array.isArray(data.pieces) ? data.pieces : [data.pieces];
-        const piecesFormatted = pieces.map(p => p === '8+' ? '8' : p).join(',');
-        params.append('rooms', piecesFormatted);
+    const roomsRange = formatRangeFromSelection(data.pieces);
+    if (roomsRange) {
+        params.append('rooms', roomsRange);
     }
     
     // Nombre de chambres
-    if (data.chambres) {
-        const chambres = Array.isArray(data.chambres) ? data.chambres : [data.chambres];
-        const chambresFormatted = chambres.map(c => c === '8+' ? '8' : c).join(',');
-        params.append('bedrooms', chambresFormatted);
+    const bedroomsRange = formatRangeFromSelection(data.chambres);
+    if (bedroomsRange) {
+        params.append('bedrooms', bedroomsRange);
     }
     
     // Extérieur
@@ -115,11 +239,18 @@ function mapToLeboncoinURL(data) {
     // Étage
     const etageMap = {
         'rdc': 'ground_floor',
-        'eleve': 'not_ground_floor',
-        'dernier': 'last_floor'
+        'eleve': 'upper_floor',
+        'dernier': 'last_stage'
     };
-    if (data.etage && etageMap[data.etage]) {
-        params.append('floor', etageMap[data.etage]);
+    if (data.etage) {
+        const etage = Array.isArray(data.etage) ? data.etage : [data.etage];
+        const floorValues = etage
+            .map(e => etageMap[e] || e)
+            .filter(e => e);
+        
+        if (floorValues.length > 0) {
+            params.append('floor_property', floorValues.join(','));
+        }
     }
     
     // Ascenseur
@@ -135,8 +266,16 @@ function mapToLeboncoinURL(data) {
         'rafraichir': '4',
         'travaux': '5'
     };
-    if (data.etat && etatMap[data.etat]) {
-        params.append('global_condition', etatMap[data.etat]);
+    if (data.etat) {
+        const etat = Array.isArray(data.etat) ? data.etat : [data.etat];
+        const conditionValues = etat
+            .map(e => etatMap[e] || e)
+            .filter(e => e);
+        
+        if (conditionValues.length > 0) {
+            conditionValues.sort((a, b) => Number(a) - Number(b));
+            params.append('global_condition', conditionValues.join(','));
+        }
     }
     
     // Classe énergétique (DPE)
@@ -150,8 +289,8 @@ function mapToLeboncoinURL(data) {
             'E': 'e',
             'F': 'f',
             'G': 'g',
-            'vierge': 'blank',
-            'non_soumis': 'not_applicable'
+            'vierge': 'v',
+            'non_soumis': 'n'
         };
         const dpeFormatted = dpeValues.map(d => dpeMap[d] || d.toLowerCase()).join(',');
         params.append('energy_rate', dpeFormatted);
