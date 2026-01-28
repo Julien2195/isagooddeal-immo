@@ -129,14 +129,14 @@ function mapToLeboncoinURL(data) {
     
     // État du bien
     const etatMap = {
-        'bon': 'good',
-        'renove': 'renovated',
-        'tres_bon': 'new',
-        'rafraichir': 'to_refresh',
-        'travaux': 'to_renovate'
+        'tres_bon': '1',
+        'bon': '2',
+        'renove': '3',
+        'rafraichir': '4',
+        'travaux': '5'
     };
     if (data.etat && etatMap[data.etat]) {
-        params.append('condition', etatMap[data.etat]);
+        params.append('global_condition', etatMap[data.etat]);
     }
     
     // Classe énergétique (DPE)

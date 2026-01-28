@@ -5,6 +5,7 @@
 // Variables globales
 let selectedCityData = null;
 let debounceTimer;
+const WEBHOOK_QUERY_PARAM = 'webhook';
 
 // Initialisation au chargement du DOM
 document.addEventListener('DOMContentLoaded', function() {
@@ -200,6 +201,79 @@ function selectCity(city) {
 }
 
 /**
+ * Résout l'URL du webhook n8n depuis le paramètre d'URL, une variable globale ou l'attribut data-webhook-url.
+ */
+function resolveWebhookUrl() {
+    const queryParamUrl = new URLSearchParams(window.location.search).get(WEBHOOK_QUERY_PARAM);
+    if (queryParamUrl && queryParamUrl.trim()) {
+        return queryParamUrl.trim();
+    }
+
+    if (window.N8N_WEBHOOK_URL) {
+        return String(window.N8N_WEBHOOK_URL).trim();
+    }
+
+    const form = document.getElementById('immobilierForm');
+    if (form) {
+        const isLocal =
+            window.location.protocol === 'file:' ||
+            window.location.hostname === 'localhost' ||
+            window.location.hostname === '127.0.0.1' ||
+            window.location.hostname === '0.0.0.0';
+
+        if (isLocal && form.dataset.webhookUrlTest) {
+            return form.dataset.webhookUrlTest.trim();
+        }
+
+        if (form.dataset.webhookUrl) {
+            return form.dataset.webhookUrl.trim();
+        }
+    }
+
+    return '';
+}
+
+/**
+ * Envoie les données vers un webhook n8n si une URL est configurée.
+ */
+async function sendToWebhook(formData, data, leboncoinUrl) {
+    const webhookUrl = resolveWebhookUrl();
+    if (!webhookUrl) {
+        console.info('Webhook n8n non configuré (data-webhook-url, window.N8N_WEBHOOK_URL ou ?webhook=...).');
+        return { sent: false, reason: 'missing' };
+    }
+
+    if (!/\/webhook(-test)?\//.test(webhookUrl)) {
+        console.warn('L\'URL du webhook n8n ne ressemble pas à un endpoint webhook:', webhookUrl);
+    }
+
+    const payload = new FormData();
+    for (const [key, value] of formData.entries()) {
+        payload.append(key, value);
+    }
+
+    payload.append('ville_data', JSON.stringify(data.ville_data || null));
+    payload.append('payload_json', JSON.stringify(data));
+    payload.append('leboncoin_url', leboncoinUrl || '');
+    payload.append('submitted_at', new Date().toISOString());
+    payload.append('source', 'form-lbc');
+
+    try {
+        await fetch(webhookUrl, {
+            method: 'POST',
+            body: payload,
+            mode: 'no-cors',
+            keepalive: true
+        });
+        console.log('Données envoyées au webhook n8n.');
+        return { sent: true };
+    } catch (error) {
+        console.error('Erreur envoi webhook n8n:', error);
+        return { sent: false, reason: 'network' };
+    }
+}
+
+/**
  * Initialisation de la soumission du formulaire
  */
 function initFormSubmit() {
@@ -225,6 +299,10 @@ function initFormSubmit() {
         
         // Mapper vers les paramètres LeBonCoin
         const leboncoinUrl = mapToLeboncoinURL(data);
+        data.leboncoin_url = leboncoinUrl;
+
+        // Envoyer les données vers le webhook n8n (si configuré)
+        void sendToWebhook(formData, data, leboncoinUrl);
         
         // Afficher les données dans la console
         console.log('Données du formulaire:', data);
