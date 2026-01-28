@@ -63,14 +63,25 @@
 
             <!-- Type de bien -->
             <div class="form-group">
-                <label for="type_bien">Type de bien <span class="required">*</span></label>
-                <select id="type_bien" name="type_bien" required>
-                    <option value="">-- Sélectionner --</option>
-                    <option value="appartement">Appartement</option>
-                    <option value="maison">Maison</option>
-                    <option value="terrain">Terrain</option>
-                    <option value="parking">Parking</option>
-                </select>
+                <label>Type de bien <span class="required">*</span></label>
+                <div class="checkbox-group">
+                    <div class="checkbox-option">
+                        <input type="checkbox" id="appartement" name="type_bien" value="appartement" required>
+                        <label for="appartement">Appartement</label>
+                    </div>
+                    <div class="checkbox-option">
+                        <input type="checkbox" id="maison" name="type_bien" value="maison">
+                        <label for="maison">Maison</label>
+                    </div>
+                    <div class="checkbox-option">
+                        <input type="checkbox" id="terrain" name="type_bien" value="terrain">
+                        <label for="terrain">Terrain</label>
+                    </div>
+                    <div class="checkbox-option">
+                        <input type="checkbox" id="parking" name="type_bien" value="parking">
+                        <label for="parking">Parking</label>
+                    </div>
+                </div>
             </div>
 
             <!-- Type d'annonces -->
