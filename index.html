@@ -121,21 +121,13 @@
 
             <!-- Type de vente -->
             <div class="form-group">
-                <label>Type de vente</label>
-                <div class="radio-group">
-                    <div class="radio-option">
-                        <input type="radio" id="ancien" name="type_vente" value="ancien">
-                        <label for="ancien">Ancien</label>
-                    </div>
-                    <div class="radio-option">
-                        <input type="radio" id="neuf" name="type_vente" value="neuf">
-                        <label for="neuf">Neuf</label>
-                    </div>
-                    <div class="radio-option">
-                        <input type="radio" id="viager" name="type_vente" value="viager">
-                        <label for="viager">Viager</label>
-                    </div>
-                </div>
+                <label for="type_vente">Type de vente</label>
+                <select id="type_vente" name="type_vente">
+                    <option value="">-- Sélectionner --</option>
+                    <option value="ancien">Ancien</option>
+                    <option value="neuf">Neuf</option>
+                    <option value="viager">Viager</option>
+                </select>
             </div>
 
             <!-- Surface du terrain -->
@@ -249,21 +241,13 @@
 
             <!-- Étage de l'appartement -->
             <div class="form-group">
-                <label>Étage de l'appartement</label>
-                <div class="radio-group">
-                    <div class="radio-option">
-                        <input type="radio" id="rdc" name="etage" value="rdc">
-                        <label for="rdc">Rez-de-chaussée</label>
-                    </div>
-                    <div class="radio-option">
-                        <input type="radio" id="etage_eleve" name="etage" value="eleve">
-                        <label for="etage_eleve">Étage élevé</label>
-                    </div>
-                    <div class="radio-option">
-                        <input type="radio" id="dernier_etage" name="etage" value="dernier">
-                        <label for="dernier_etage">Dernier étage</label>
-                    </div>
-                </div>
+                <label for="etage">Étage de l'appartement</label>
+                <select id="etage" name="etage">
+                    <option value="">-- Sélectionner --</option>
+                    <option value="rdc">Rez-de-chaussée</option>
+                    <option value="eleve">Étage élevé</option>
+                    <option value="dernier">Dernier étage</option>
+                </select>
             </div>
 
             <!-- Ascenseur -->
